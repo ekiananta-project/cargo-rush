@@ -1,0 +1,17 @@
+{
+  "name": "cargo-rush-android",
+  "version": "1.4.0",
+  "private": true,
+  "description": "Cargo Rush V1.4 mobile Capacitor shell",
+  "scripts": {
+    "android:init": "cap add android",
+    "android:sync": "cap sync android",
+    "android:open": "cap open android",
+    "android:debug": "cd android && ./gradlew assembleDebug"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/android": "^7.0.0"
+  }
+}
