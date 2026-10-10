@@ -1,0 +1,8 @@
+{
+  "appId": "id.langsungberes.cargorush",
+  "appName": "Cargo Rush",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}
