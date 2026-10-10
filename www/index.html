@@ -174,8 +174,20 @@ function clampedTarget(clientX,clientY,p){
  const minY=Math.min(...p.cells.map(c=>c[1])),maxY=Math.max(...p.cells.map(c=>c[1]));
  return {x:Math.max(-minX,Math.min(N-1-maxX,raw.x)),y:Math.max(-minY,Math.min(N-1-maxY,raw.y))};
 }
-$('tray').addEventListener('pointerdown',e=>{const el=e.target.closest('[data-p]');if(!el||!playing||clearing)return;selected=+el.dataset.p;sfx('pick');drag={id:e.pointerId,startX:e.clientX,startY:e.clientY,moved:false};});
-window.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;if(Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)<9&&!drag.moved)return;drag.moved=true;const p=pieces[selected];if(!p)return;let ghost=$('ghost');ghost.style.display='none';ghost.innerHTML='';const boardEl=$('board'), firstCell=boardEl.querySelector('.cell'), cellRect=firstCell.getBoundingClientRect();
+// V1.5: one-hand virtual drag. Touch starts with a preview on the board;
+// finger movement controls a relative aim rather than requiring physical reach.
+function renderMobileAim(){
+ if(!drag||!drag.mobile||selected<0||!pieces[selected])return;
+ const p=pieces[selected],boardEl=$('board'),first=boardEl.querySelector('.cell');if(!first)return;
+ const cellRect=first.getBoundingClientRect(),gap=parseFloat(getComputedStyle(boardEl).columnGap)||0,pitch=cellRect.width+gap;
+ const ghost=$('ghost');ghost.innerHTML='';ghost.style.width=(pitch*3-gap)+'px';ghost.style.height=(pitch*3-gap)+'px';ghost.style.transform='none';
+ for(const [dx,dy] of p.cells){const tile=document.createElement('div');tile.className='cell filled '+(p.kind==='mini'?'mini-kind':p.kind);tile.style.cssText='position:absolute;left:'+(dx*pitch)+'px;top:'+(dy*pitch)+'px;width:'+cellRect.width+'px;height:'+cellRect.height+'px;box-sizing:border-box;';ghost.appendChild(tile)}
+ const x=drag.aimX,y=drag.aimY,valid=fits(p,x,y),r=boardEl.getBoundingClientRect();ghost.classList.toggle('blocked',!valid);ghost.style.display='block';ghost.style.left=(r.left+x*pitch)+'px';ghost.style.top=(r.top+y*pitch)+'px';
+ boardEl.querySelectorAll('.cell').forEach(c=>c.classList.remove('valid','invalid'));
+ for(const [dx,dy] of p.cells){const cx=x+dx,cy=y+dy;if(cx>=0&&cy>=0&&cx<N&&cy<N)boardEl.children[cy*N+cx].classList.add(valid?'valid':'invalid')}
+}
+$('tray').addEventListener('pointerdown',e=>{const el=e.target.closest('[data-p]');if(!el||!playing||clearing)return;selected=+el.dataset.p;sfx('pick');drag={id:e.pointerId,startX:e.clientX,startY:e.clientY,moved:false,mobile:e.pointerType==='touch',aimX:2,aimY:2};if(drag.mobile){drag.moved=true;try{el.setPointerCapture(e.pointerId)}catch(_){ }renderMobileAim();}});
+window.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;if(drag.mobile){e.preventDefault();const p=pieces[selected];if(!p)return;const maxX=N-1-Math.max(...p.cells.map(c=>c[0])),maxY=N-1-Math.max(...p.cells.map(c=>c[1]));const boardRect=$('board').getBoundingClientRect();const gain=1.35;drag.aimX=Math.max(0,Math.min(maxX,Math.round(2+(e.clientX-drag.startX)*gain/(boardRect.width/N))));drag.aimY=Math.max(0,Math.min(maxY,Math.round(2+(e.clientY-drag.startY)*gain/(boardRect.height/N))));renderMobileAim();return;}if(Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)<9&&!drag.moved)return;drag.moved=true;const p=pieces[selected];if(!p)return;let ghost=$('ghost');ghost.style.display='none';ghost.innerHTML='';const boardEl=$('board'), firstCell=boardEl.querySelector('.cell'), cellRect=firstCell.getBoundingClientRect();
 const gridGap=parseFloat(getComputedStyle(boardEl).columnGap)||0;
 // Draw full-size cargo tiles independently of the small tray .shape styles.
 // Absolute positioning prevents the 3x3 preview from shrinking its tiles.
@@ -200,6 +212,6 @@ ghost.style.display='block';
 ghost.style.left=(r.left+x*pitch)+'px';
 ghost.style.top=(r.top+y*pitch)+'px';
 $('board').querySelectorAll('.cell').forEach(c=>c.classList.remove('valid','invalid'));for(let [dx,dy] of p.cells){let cx=x+dx,cy=y+dy;if(cx>=0&&cy>=0&&cx<N&&cy<N)$('board').children[cy*N+cx].classList.add(allowed?'valid':'invalid')}});
-window.addEventListener('pointerup',e=>{if(!drag||drag.id!==e.pointerId)return;let was=drag.moved;drag=null;$('ghost').style.display='none';$('ghost').innerHTML='';$('board').querySelectorAll('.cell').forEach(c=>c.classList.remove('valid','invalid'));if(was){const trayRect=$('tray').getBoundingClientRect();if(e.clientY>=trayRect.top&&e.clientY<=trayRect.bottom){cancelSelection();return}let {x,y}=clampedTarget(e.clientX,e.clientY,pieces[selected]);place(x,y)}else render()});window.addEventListener('pointercancel',()=>{drag=null;$('ghost').style.display='none';$('ghost').innerHTML='';render()});
+window.addEventListener('pointerup',e=>{if(!drag||drag.id!==e.pointerId)return;let was=drag.moved;const mobileAim=drag.mobile?{x:drag.aimX,y:drag.aimY}:null;drag=null;$('ghost').style.display='none';$('ghost').innerHTML='';$('board').querySelectorAll('.cell').forEach(c=>c.classList.remove('valid','invalid'));if(was){if(mobileAim){place(mobileAim.x,mobileAim.y);return}const trayRect=$('tray').getBoundingClientRect();if(e.clientY>=trayRect.top&&e.clientY<=trayRect.bottom){cancelSelection();return}let {x,y}=clampedTarget(e.clientX,e.clientY,pieces[selected]);place(x,y)}else render()});window.addEventListener('pointercancel',()=>{drag=null;$('ghost').style.display='none';$('ghost').innerHTML='';render()});
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){cancelSelection();return}if(e.key.toLowerCase()==='r')rotate();if(e.code==='Space'&&playing){e.preventDefault();newGame()}});render();
 </script></body></html>
