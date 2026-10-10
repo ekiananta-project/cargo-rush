@@ -1,0 +1,205 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#071c17"><title>Cargo Rush — LangsungBeres Studio</title><style>
+:root{font-family:system-ui,sans-serif;color:#eafff6;background:#071c17}*{box-sizing:border-box}body{margin:0;min-height:100dvh;background:radial-gradient(circle at top,#174637,#071c17 70%)}button{font:inherit;cursor:pointer;color:inherit;border:1px solid #3b826b;background:#153e32;border-radius:12px;padding:10px}button:disabled{opacity:.35;cursor:default}.app{max-width:550px;margin:auto;padding:12px;min-height:100dvh;display:flex;flex-direction:column;gap:10px}.head{display:flex;justify-content:space-between;align-items:center}.brand{font-weight:1000;font-size:24px;letter-spacing:1px;color:#62ecb0}.tag{font-size:11px;color:#b6dacb}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.stat{background:#103329;border:1px solid #2e7059;border-radius:12px;padding:9px;text-align:center}.stat b{display:block;font-size:22px}.stat small{font-size:10px;color:#abd6c4}.board-wrap{padding:10px;background:#75502b;border:5px solid #aa7740;border-radius:17px;box-shadow:0 9px 0 #372616}.board{display:grid;grid-template-columns:repeat(6,1fr);aspect-ratio:1;gap:4px;touch-action:none;user-select:none}.cell{position:relative;border-radius:6px;background:#254c3d;border:1px solid #44745d}.cell:after{content:'';position:absolute;inset:5px;border:1px dashed #38664e;border-radius:2px}.cell.filled:after{content:none}.cell.filled,.mini{background:linear-gradient(140deg,#dfad56,#a86d31);border:2px solid #efcc7c;box-shadow:inset 0 -6px #8e592d}.cell.heavy,.cargo-heavy .mini{background:linear-gradient(140deg,#8f9da7,#526472);border-color:#c0d0d9;box-shadow:inset 0 -6px #40505a}.cell.flex,.cargo-flex .mini{background:linear-gradient(140deg,#76c5ed,#327a9e);border-color:#b7e9fa;box-shadow:inset 0 -6px #205572}.cell.mini-kind{background:#edc878}.cell.valid{outline:3px solid #62ffc2;outline-offset:-3px}.cell.invalid{outline:3px solid #ff7676;outline-offset:-3px}.tray{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.piece{height:106px;padding:6px 3px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;touch-action:none}.piece.selected{border:2px solid #6fffc3;background:#225a45}.piece .label{font-size:10px;font-weight:800}.shape{display:grid;grid-template-columns:repeat(3,15px);grid-template-rows:repeat(3,15px);gap:2px;align-content:center;justify-content:center;min-height:50px}.mini{border-radius:3px;border:1px solid #ffe0a1;box-shadow:inset 0 -3px #8e592d}.actions{display:flex;gap:8px}.actions button{flex:1;font-size:13px}.hint{text-align:center;font-size:12px;color:#b6dacb}.toast{height:28px;text-align:center;color:#6dffbc;font-weight:900}.overlay{position:fixed;inset:0;background:#04130fdc;display:flex;align-items:center;justify-content:center;padding:18px;z-index:10}.overlay[hidden]{display:none}.modal{max-width:390px;width:100%;background:#10392d;border:2px solid #55bd90;border-radius:20px;padding:22px;text-align:center}.modal img{width:100%;border-radius:12px}.modal h1{font-size:24px}.modal p{line-height:1.5;color:#c5e4d6}.modal button{width:100%;margin-top:8px;background:#2abf82;color:#062419;font-weight:900}.ghost{position:fixed;z-index:9;pointer-events:none;opacity:.85;display:none}.ghost .shape{transform:none;grid-template-columns:repeat(3,var(--drag-cell));grid-template-rows:repeat(3,var(--drag-cell));gap:var(--drag-gap);min-height:0}.ghost .mini{border-radius:6px;border-width:2px}.ghost{opacity:.88;filter:drop-shadow(0 5px 4px #0008)}.ghost.blocked .cell{outline:3px solid #ff7777;outline-offset:-3px;filter:saturate(.75)}@media(max-width:380px){.piece{height:90px}.shape{transform:scale(.83)}.brand{font-size:20px}}
+/* Wooden cargo faces with visible straps, consistent on board and in tray. */
+.cell.filled,.shape .mini{background-image:linear-gradient(90deg,transparent 43%,rgba(67,43,22,.28) 44%,rgba(67,43,22,.28) 56%,transparent 57%),linear-gradient(0deg,transparent 43%,rgba(255,238,190,.22) 44%,rgba(255,238,190,.22) 56%,transparent 57%),linear-gradient(145deg,#e9b966,#b77837);background-size:100% 100%;box-shadow:inset 0 3px rgba(255,255,255,.19),inset 0 -5px rgba(80,47,22,.35);border:2px solid #f0c879}
+.cell.heavy,.shape.cargo-heavy .mini{background-image:linear-gradient(90deg,transparent 43%,#445967 44%,#445967 56%,transparent 57%),linear-gradient(145deg,#9eaeb9,#536675);border-color:#c8d6de}
+.cell.flex,.shape.cargo-flex .mini{background-image:linear-gradient(90deg,transparent 43%,#24769b 44%,#24769b 56%,transparent 57%),linear-gradient(145deg,#8bd5f3,#3289b5);border-color:#b4edff}
+.cell.mini-kind{background-image:linear-gradient(90deg,transparent 43%,#a86e36 44%,#a86e36 56%,transparent 57%),linear-gradient(145deg,#ffe5a0,#d69b49)}
+.shape .mini{width:15px;height:15px;border-radius:3px}
+.piece .shape{flex:1;align-content:center;min-height:50px}
+.piece{overflow:hidden}
+
+/* Clear celebration: tiles stay visible until the outgoing animation finishes. */
+.board-wrap{position:relative;overflow:hidden}
+.cell.clearing{z-index:2;animation:cargoPop .43s cubic-bezier(.18,.8,.28,1) both;animation-delay:var(--delay,0ms);box-shadow:0 0 14px #ffe78c,inset 0 0 12px #fff8;}
+@keyframes cargoPop{0%{transform:scale(1);opacity:1;filter:brightness(1)}30%{transform:scale(1.13);opacity:1;filter:brightness(2.2)}65%{transform:scale(.86) rotate(5deg);opacity:.8}100%{transform:scale(.1) rotate(12deg);opacity:0}}
+.board-wrap.shipment{animation:cargoBump .4s ease-out}
+@keyframes cargoBump{0%,100%{transform:translateY(0)}20%{transform:translateY(3px)}45%{transform:translateY(-2px)}}
+.clear-fx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5}
+.clear-spark{position:absolute;width:7px;height:7px;border-radius:2px;background:var(--spark,#ffe08b);box-shadow:0 0 8px var(--spark,#ffe08b);animation:sparkFly .6s ease-out forwards}
+@keyframes sparkFly{from{opacity:1;transform:translate(-50%,-50%) scale(1)}to{opacity:0;transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty))) rotate(140deg) scale(.25)}}
+.clear-banner{position:absolute;z-index:6;top:40%;left:50%;transform:translate(-50%,-50%) scale(.6);font-weight:1000;font-size:clamp(22px,6vw,37px);white-space:nowrap;color:#fff4b6;text-shadow:0 3px #7c4b13,0 0 18px #ffcd54;pointer-events:none;animation:bannerRise .85s ease-out forwards}
+@keyframes bannerRise{0%{opacity:0;transform:translate(-50%,-30%) scale(.65)}24%{opacity:1;transform:translate(-50%,-50%) scale(1.14)}65%{opacity:1;transform:translate(-50%,-65%) scale(1)}100%{opacity:0;transform:translate(-50%,-100%) scale(.95)}}
+@media(prefers-reduced-motion:reduce){.cell.clearing,.board-wrap.shipment,.clear-spark,.clear-banner{animation-duration:.01ms!important;animation-delay:0ms!important}}
+
+/* Android/mobile polish: presentation only; gameplay V1.4 remains unchanged. */
+html{overscroll-behavior:none;-webkit-text-size-adjust:100%}
+body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+.app{padding:calc(10px + env(safe-area-inset-top,0px)) max(10px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));width:100%}
+button{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.tray,.piece,.shape,.ghost,.board{touch-action:none;-webkit-user-select:none;user-select:none}
+.actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.actions button{min-height:44px;padding:10px 5px}
+#sound{min-width:44px;min-height:44px}
+@media(max-width:550px){
+ .app{gap:clamp(5px,1.1dvh,10px)}
+ .head .brand{font-size:clamp(19px,5vw,24px)}
+ .stat{padding:6px 4px}.stat b{font-size:clamp(17px,5vw,22px)}
+ .board-wrap{padding:7px;border-width:4px}
+ .board{gap:clamp(2px,.8vw,4px)}
+ .piece{height:clamp(72px,12dvh,104px);min-width:0}
+ .piece .label{font-size:9px}
+ .hint{font-size:11px;line-height:1.25}
+ .toast{height:22px;font-size:13px}
+}
+@media(max-height:690px) and (orientation:portrait){
+ .app{gap:5px}.piece{height:68px}.stat{padding:4px}.stat b{font-size:17px}
+ .head .brand{font-size:19px}.tag{font-size:9px}.hint{font-size:10px}
+ .actions button{min-height:40px;padding:7px 4px}
+}
+@media(orientation:landscape) and (max-height:500px){
+ .app{max-width:100%;display:grid;grid-template-columns:minmax(220px,46vh) minmax(250px,1fr);align-content:start}
+ .head,.stats,.toast{grid-column:2}.board-wrap{grid-column:1;grid-row:1/span 5;align-self:start}
+ .hint,.tray,.actions{grid-column:2}.piece{height:65px}.actions button{min-height:36px}
+}
+</style></head><body><main class="app"><header class="head"><div><div class="brand">🚜 CARGO RUSH</div><div class="tag">LANGSUNGBERES STUDIO · ANDROID PREVIEW · V1.4</div></div><button id="sound">🔊</button></header><section class="stats"><div class="stat"><small>SKOR</small><b id="score">0</b></div><div class="stat"><small>REKOR</small><b id="best">0</b></div><div class="stat"><small>PENGIRIMAN</small><b id="lines">0</b></div></section><div class="toast" id="toast"></div><div class="board-wrap"><div id="board" class="board" aria-label="Papan Cargo Rush 6 kali 6"></div></div><div class="hint">Pilih lalu seret ke papan. Batal: tombol ✕, Esc, atau tarik kembali ke tray.</div><div class="tray" id="tray"></div><div class="actions"><button id="rotate">↻ PUTAR FLEX</button><button id="cancel">✕ BATAL PILIH</button><button id="undo">↶ BATALKAN</button><button id="restart">⟳ ULANG</button></div><div class="hint">Offline • 6×6 • Empat muatan per batch • Prototype port dari Godot</div></main><div class="ghost" id="ghost"></div><div class="overlay" id="overlay"><div class="modal" id="modal"><img src="assets/splash.png" alt="Cargo Rush"><h1>CARGO RUSH</h1><p>Susun kargo di gudang. Penuhi satu baris atau kolom untuk mengirimnya!</p><button id="start">MULAI SHIFT 🚜</button></div></div><script>
+'use strict';
+const $=id=>document.getElementById(id),N=6;
+const NORMAL=[[[0,0],[1,0]],[[0,0],[1,0],[2,0]],[[0,0],[0,1],[0,2]],[[0,0],[1,0],[0,1],[1,1]],[[0,0],[1,0],[2,0],[1,1]],[[0,0],[0,1],[1,1]],[[1,0],[0,1],[1,1]],[[0,0],[1,0],[2,0],[0,1]],[[0,0],[1,0],[2,0],[2,1]],[[0,0],[1,0],[1,1],[2,1]],[[1,0],[2,0],[0,1],[1,1]]];
+const FLEX=[[[0,0],[1,0],[2,0]],[[0,0],[1,0],[2,0],[0,1]],[[0,0],[1,0],[1,1],[1,2]]];
+const HEAVY=[Array.from({length:9},(_,i)=>[i%3,Math.floor(i/3)]),Array.from({length:6},(_,i)=>[i%3,Math.floor(i/3)]),Array.from({length:6},(_,i)=>[i%2,Math.floor(i/2)])];
+let board=Array(36).fill(null),pieces=[],selected=-1,score=0,lines=0,history=[],playing=false,sound=true,drag=null,clearing=false,clearTimer=null;
+let audioCtx=null,masterGain=null;
+function beep(freq=420,duration=.08,type='sine',volume=.09,delay=0){
+ if(!sound)return;
+ try{
+  audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended')audioCtx.resume();
+  if(!masterGain){
+   const compressor=audioCtx.createDynamicsCompressor();
+   compressor.threshold.value=-18;compressor.knee.value=12;compressor.ratio.value=4;
+   compressor.attack.value=.003;compressor.release.value=.16;
+   masterGain=audioCtx.createGain();masterGain.gain.value=2.4;
+   compressor.connect(masterGain);masterGain.connect(audioCtx.destination);
+   audioCtx._cargoCompressor=compressor;
+  }
+  const t=audioCtx.currentTime+delay,o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type=type;o.frequency.setValueAtTime(freq,t);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.min(volume*4.5,.58),t+.012);
+  g.gain.exponentialRampToValueAtTime(.0001,t+duration);
+  o.connect(g);g.connect(audioCtx._cargoCompressor);o.start(t);o.stop(t+duration+.015);
+ }catch(e){}
+}
+function sfx(kind,combo=1){
+ if(kind==='pick'){beep(540,.12,'square',.065);beep(800,.07,'triangle',.05,.03)}
+ if(kind==='place'){beep(180,.19,'square',.12);beep(340,.18,'triangle',.11,.055)}
+ if(kind==='clear'){
+  // Distinct arcade fanfares for one, two, and three-or-more lines.
+  combo=Math.max(1,Math.floor(combo));
+  if(combo===1){
+   [392,523,659,784,1047].forEach((f,i)=>beep(f,.16,'triangle',.065,i*.075));
+   beep(180,.21,'square',.055);
+  }else if(combo===2){
+   [440,554,659,880,1109,1318].forEach((f,i)=>beep(f,.17,'triangle',.073,i*.067));
+   beep(165,.22,'square',.075,0);beep(220,.23,'square',.07,.25);
+   [880,1109,1318].forEach(f=>beep(f,.29,'sine',.048,.43));
+  }else{
+   [523,659,784,1047,1318,1568,1760].forEach((f,i)=>beep(f,.15,'triangle',.072,i*.061));
+   beep(145,.24,'square',.075,0);beep(185,.23,'square',.075,.22);
+   [1047,1318,1568].forEach(f=>beep(f,.34,'sine',.052,.48));
+   beep(2093,.27,'triangle',.045,.53);
+  }
+ }
+ if(kind==='rotate')beep(680,.15,'square',.085);
+ if(kind==='cancel'){beep(420,.095,'triangle',.085);beep(280,.16,'sine',.11,.065)}
+ if(kind==='error')beep(150,.19,'sawtooth',.09);
+ if(kind==='end'){beep(360,.26,'square',.09);beep(230,.34,'triangle',.12,.18)}
+}
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function piece(kind){return {kind,cells:(kind==='heavy'?pick(HEAVY):kind==='flex'?pick(FLEX):kind==='mini'?[[0,0]]:pick(NORMAL)).map(p=>[...p]),points:{heavy:180,flex:110,mini:25,normal:70}[kind]}}
+function deal(){const density=board.filter(Boolean).length/36,plan=['normal','normal','flex','normal'];if(Math.random()<.62)plan[Math.floor(Math.random()*4)]='heavy';if(density>.45||Math.random()<.28)plan[Math.floor(Math.random()*4)]='mini';pieces=plan.map(piece);selected=-1}
+function norm(c){let mx=Math.min(...c.map(p=>p[0])),my=Math.min(...c.map(p=>p[1]));return c.map(([x,y])=>[x-mx,y-my])}
+function shapeHTML(p){let cells=new Set(p.cells.map(([x,y])=>x+','+y));let s='<div class="shape cargo-'+p.kind+'">';for(let y=0;y<3;y++)for(let x=0;x<3;x++)s+=cells.has(x+','+y)?'<span class="mini"></span>':'<span></span>';return s+'</div>'}
+function render(){const b=$('board');b.innerHTML=board.map((v,i)=>'<div class="cell '+(v?'filled '+(v==='mini'?'mini-kind':v):'')+'" data-i="'+i+'"></div>').join('');$('tray').innerHTML=pieces.map((p,i)=>p?'<button class="piece '+(i===selected?'selected':'')+'" data-p="'+i+'"><span class="label">'+p.kind.toUpperCase()+'</span>'+shapeHTML(p)+'<span class="label">+'+p.points+'</span></button>':'<button class="piece" disabled>TERKIRIM ✓</button>').join('');$('score').textContent=score;$('lines').textContent=lines;$('best').textContent=localStorage.getItem('cargoRushBest')||'0';$('rotate').disabled=selected<0||!pieces[selected]||pieces[selected].kind!=='flex';$('cancel').disabled=selected<0;$('undo').disabled=!history.length}
+function fits(p,x,y){return p.cells.every(([dx,dy])=>x+dx>=0&&x+dx<N&&y+dy>=0&&y+dy<N&&!board[(y+dy)*N+x+dx])}
+function canMove(){return pieces.some(p=>p&&Array.from({length:36},(_,i)=>fits(p,i%N,Math.floor(i/N))).some(Boolean))}
+function msg(t){$('toast').textContent=t}
+function snapshot(){history.push({board:[...board],pieces:structuredClone(pieces),score,lines});if(history.length>15)history.shift()}
+function finishMove(){
+ if(pieces.every(p=>!p))deal();
+ let best=+(localStorage.getItem('cargoRushBest')||0);
+ if(score>best)localStorage.setItem('cargoRushBest',score);
+ render();if(!canMove())end();
+}
+function celebrateClear(indices,count){
+ clearing=true;
+ const wrap=document.querySelector('.board-wrap'),b=$('board');
+ const fx=document.createElement('div');fx.className='clear-fx';wrap.appendChild(fx);
+ const title=document.createElement('div');title.className='clear-banner';title.textContent=count>1?'COMBO x'+count+'!':'CARGO CLEAR!';wrap.appendChild(title);
+ const wrapRect=wrap.getBoundingClientRect();
+ indices.forEach((i,k)=>{
+  const cell=b.children[i];if(!cell)return;
+  cell.classList.add('clearing');cell.style.setProperty('--delay',(k%6)*27+'ms');
+  const rect=cell.getBoundingClientRect();const cx=rect.left-wrapRect.left+rect.width/2,cy=rect.top-wrapRect.top+rect.height/2;
+  for(let j=0;j<3;j++){
+   const dot=document.createElement('span');dot.className='clear-spark';
+   const a=(k*71+j*123)*Math.PI/180,dist=24+((k+j*7)%4)*14;
+   dot.style.left=cx+'px';dot.style.top=cy+'px';dot.style.setProperty('--tx',Math.cos(a)*dist+'px');dot.style.setProperty('--ty',Math.sin(a)*dist+'px');
+   dot.style.setProperty('--spark',j===0?'#fff7b8':j===1?'#ffb45d':'#75ffbf');fx.appendChild(dot);
+  }
+ });
+ wrap.classList.remove('shipment');void wrap.offsetWidth;wrap.classList.add('shipment');
+ clearTimer=setTimeout(()=>{
+  indices.forEach(i=>board[i]=null);
+  fx.remove();title.remove();wrap.classList.remove('shipment');
+  clearTimer=null;clearing=false;finishMove();
+ },680);
+}
+function place(x,y){
+ if(clearing||!playing||selected<0||!pieces[selected])return;
+ let p=pieces[selected];if(!fits(p,x,y)){msg('AREA TERISI / DI LUAR PAPAN');sfx('error');return}
+ snapshot();p.cells.forEach(([dx,dy])=>board[(y+dy)*N+x+dx]=p.kind);
+ score+=p.points;pieces[selected]=null;selected=-1;
+ let clear=new Set(),count=0;
+ for(let y=0;y<N;y++)if(board.slice(y*N,y*N+N).every(Boolean)){count++;for(let x=0;x<N;x++)clear.add(y*N+x)}
+ for(let x=0;x<N;x++)if(Array.from({length:N},(_,y)=>board[y*N+x]).every(Boolean)){count++;for(let y=0;y<N;y++)clear.add(y*N+x)}
+ if(count)sfx('clear',count);else sfx('place');
+ if(count){
+  lines+=count;score+=count*300+(count>1?(count-1)*150:0);
+  msg(count>1?'DOUBLE SHIPMENT! 🚜':'PENGIRIMAN! 🚜');render();celebrateClear([...clear],count);
+ }else{msg('PAS! +'+p.points);finishMove()}
+}
+function end(){sfx('end');playing=false;$('modal').innerHTML='<h1>SHIFT SELESAI 📦</h1><p>Skor: <b>'+score+'</b><br>Pengiriman: '+lines+'<br>Rekor: '+(localStorage.getItem('cargoRushBest')||score)+'</p><button id="again">MAIN LAGI</button>';$('overlay').hidden=false;$('again').onclick=newGame}
+function newGame(){if(clearTimer){clearTimeout(clearTimer);clearTimer=null}clearing=false;document.querySelectorAll('.clear-fx,.clear-banner').forEach(e=>e.remove());document.querySelector('.board-wrap').classList.remove('shipment');beep(550,.10,'triangle',.07);board=Array(36).fill(null);score=0;lines=0;history=[];playing=true;deal();$('overlay').hidden=true;msg('SHIFT DIMULAI!');render()}
+function rotate(){if(clearing)return;if(selected<0||!pieces[selected]||pieces[selected].kind!=='flex')return;let p=pieces[selected];p.cells=norm(p.cells.map(([x,y])=>[-y,x]));sfx('rotate');render()}
+function cancelSelection(){if(clearing)return;const hadSelection=selected>=0||!!drag;if(hadSelection)sfx('cancel');drag=null;selected=-1;const g=$('ghost');g.style.display='none';g.innerHTML='';$('board').querySelectorAll('.cell').forEach(c=>c.classList.remove('valid','invalid'));msg('MUATAN DIBATALKAN');render()}
+$('cancel').onclick=cancelSelection;
+$('start').onclick=newGame;$('rotate').onclick=rotate;$('restart').onclick=()=>{if(confirm('Mulai ulang shift?'))newGame()};$('undo').onclick=()=>{if(clearing||!history.length)return;let s=history.pop();board=s.board;pieces=s.pieces;score=s.score;lines=s.lines;selected=-1;sfx('cancel');msg('LANGKAH DIBATALKAN');render()};$('sound').onclick=()=>{sound=!sound;$('sound').textContent=sound?'🔊':'🔇'};
+$('tray').addEventListener('click',e=>{let el=e.target.closest('[data-p]');if(!el||!playing||clearing)return;selected=+el.dataset.p;sfx('pick');render()});$('board').addEventListener('click',e=>{let el=e.target.closest('[data-i]');if(el)place(+el.dataset.i%N,Math.floor(+el.dataset.i/N))});
+function targetCell(clientX,clientY){const r=$('board').getBoundingClientRect();let x=Math.floor((clientX-r.left)/r.width*N),y=Math.floor((clientY-r.top)/r.height*N);return {x,y}}
+function clampedTarget(clientX,clientY,p){
+ const raw=targetCell(clientX,clientY);
+ if(!p)return raw;
+ const minX=Math.min(...p.cells.map(c=>c[0])),maxX=Math.max(...p.cells.map(c=>c[0]));
+ const minY=Math.min(...p.cells.map(c=>c[1])),maxY=Math.max(...p.cells.map(c=>c[1]));
+ return {x:Math.max(-minX,Math.min(N-1-maxX,raw.x)),y:Math.max(-minY,Math.min(N-1-maxY,raw.y))};
+}
+$('tray').addEventListener('pointerdown',e=>{const el=e.target.closest('[data-p]');if(!el||!playing||clearing)return;selected=+el.dataset.p;sfx('pick');drag={id:e.pointerId,startX:e.clientX,startY:e.clientY,moved:false};});
+window.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;if(Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)<9&&!drag.moved)return;drag.moved=true;const p=pieces[selected];if(!p)return;let ghost=$('ghost');ghost.style.display='none';ghost.innerHTML='';const boardEl=$('board'), firstCell=boardEl.querySelector('.cell'), cellRect=firstCell.getBoundingClientRect();
+const gridGap=parseFloat(getComputedStyle(boardEl).columnGap)||0;
+// Draw full-size cargo tiles independently of the small tray .shape styles.
+// Absolute positioning prevents the 3x3 preview from shrinking its tiles.
+const pitch=cellRect.width+gridGap;
+ghost.style.width=(pitch*3-gridGap)+'px';
+ghost.style.height=(pitch*3-gridGap)+'px';
+ghost.style.transform='none';
+for(const [dx,dy] of p.cells){
+ const tile=document.createElement('div');
+ tile.className='cell filled '+(p.kind==='mini'?'mini-kind':p.kind);
+ tile.style.cssText='position:absolute;left:'+(dx*pitch)+'px;top:'+(dy*pitch)+'px;width:'+cellRect.width+'px;height:'+cellRect.height+'px;box-sizing:border-box;';
+ ghost.appendChild(tile);
+}
+// Keep the full cargo silhouette inside the board, even if pointer leaves it.
+let {x,y}=clampedTarget(e.clientX,e.clientY,p);
+const r=boardEl.getBoundingClientRect();
+const allowed=fits(p,x,y);
+// Always display the dragged cargo in front; invalid locations are visual only.
+// fits() still rejects overlapping cargo when the pointer is released.
+ghost.classList.toggle('blocked',!allowed);
+ghost.style.display='block';
+ghost.style.left=(r.left+x*pitch)+'px';
+ghost.style.top=(r.top+y*pitch)+'px';
+$('board').querySelectorAll('.cell').forEach(c=>c.classList.remove('valid','invalid'));for(let [dx,dy] of p.cells){let cx=x+dx,cy=y+dy;if(cx>=0&&cy>=0&&cx<N&&cy<N)$('board').children[cy*N+cx].classList.add(allowed?'valid':'invalid')}});
+window.addEventListener('pointerup',e=>{if(!drag||drag.id!==e.pointerId)return;let was=drag.moved;drag=null;$('ghost').style.display='none';$('ghost').innerHTML='';$('board').querySelectorAll('.cell').forEach(c=>c.classList.remove('valid','invalid'));if(was){const trayRect=$('tray').getBoundingClientRect();if(e.clientY>=trayRect.top&&e.clientY<=trayRect.bottom){cancelSelection();return}let {x,y}=clampedTarget(e.clientX,e.clientY,pieces[selected]);place(x,y)}else render()});window.addEventListener('pointercancel',()=>{drag=null;$('ghost').style.display='none';$('ghost').innerHTML='';render()});
+window.addEventListener('keydown',e=>{if(e.key==='Escape'){cancelSelection();return}if(e.key.toLowerCase()==='r')rotate();if(e.code==='Space'&&playing){e.preventDefault();newGame()}});render();
+</script></body></html>
